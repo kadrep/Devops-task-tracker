@@ -1,0 +1,50 @@
+name: DevOps Production Deployment Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v3
+
+    - name: Set up Python Environment
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies for testing
+      run: |
+        pip install flask
+
+    - name: Execute Basic Code Lint & Test Phase
+      run: |
+        python -m compileall app.py
+        echo "Basic syntax verification tests passed!"
+
+    - name: Build Docker Container Image
+      run: |
+        docker build -t devops-app:latest .
+        echo "Docker image built successfully!"
+
+  provision-and-deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v3
+
+    - name: Setup HashiCorp Terraform
+      uses: hashicorp/setup-terraform@v2
+
+    - name: Terraform Init & Plan
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      run: |
+        terraform init
+        terraform plan
+        echo "Infrastructure plan simulated successfully. To fully deploy, configure your AWS secrets in GitHub Repository Settings."
